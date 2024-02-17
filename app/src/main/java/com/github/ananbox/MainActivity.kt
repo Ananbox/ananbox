@@ -34,6 +34,7 @@ class MainActivity : AppCompatActivity() {
             if(Anbox.initRuntime(mSurfaceView.width, mSurfaceView.height, xdpi.toInt(), ydpi.toInt())) {
                 Anbox.createSurface(surface)
                 Anbox.startRuntime()
+//                Log.d("anbox", applicationContext.applicationInfo.nativeLibraryDir + "/libproot.so")
                 Anbox.startContainer()
             }
             else {

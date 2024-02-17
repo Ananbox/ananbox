@@ -24,6 +24,8 @@ find_package(Boost COMPONENTS filesystem log_setup log serialization system thre
 
 add_subdirectory(anbox)
 
+#include(Proot)
+
 include_directories(
         ${CMAKE_SOURCE_DIR}/anbox
         ${CMAKE_SOURCE_DIR}/anbox/src
