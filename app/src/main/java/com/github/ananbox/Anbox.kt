@@ -6,13 +6,11 @@ import android.view.MotionEvent
 import android.view.Surface
 import android.os.Process
 import android.view.View
+import kotlin.system.exitProcess
 
-class Anbox(context: Context): View.OnTouchListener {
-    companion object {
-        // Used to load the 'anbox' library on application startup.
-        init {
-            System.loadLibrary("anbox")
-        }
+object Anbox: View.OnTouchListener {
+    init {
+        System.loadLibrary("anbox")
     }
 
     external fun stringFromJNI(): String
@@ -31,8 +29,9 @@ class Anbox(context: Context): View.OnTouchListener {
 
     fun stopContainer() {
         Log.d("Anbox", "stopContainer")
-        System.exit(0);
-        Process.killProcess(Process.myPid());
+        // TODO: better way to stop the container
+        Runtime.getRuntime().exec("killall init")
+        exitProcess(0)
     }
 
     override fun onTouch(v: View, e: MotionEvent): Boolean {

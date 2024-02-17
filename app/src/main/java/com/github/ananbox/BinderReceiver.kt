@@ -40,6 +40,9 @@ class BinderReceiver : BroadcastReceiver() {
                 ILocalInterface.Stub.asInterface(localBinder).onReceiveBinder(remoteBinder)
                 Log.d(tag, "remoteBinder sent");
             }
+            else {
+                Log.e(tag, "Empty broadcast");
+            }
         }
     }
 }

@@ -2,6 +2,7 @@ package com.github.ananbox
 
 import android.annotation.SuppressLint
 import android.app.ActivityManager
+import android.content.Intent
 import android.os.Bundle
 import android.util.DisplayMetrics
 import android.util.Log
@@ -20,7 +21,6 @@ class MainActivity : AppCompatActivity() {
 
     private val TAG = "MainActivity"
     private lateinit var mSurfaceView: SurfaceView
-    private lateinit var anbox: Anbox
     private val mSurfaceCallback: SurfaceHolder.Callback = object : SurfaceHolder.Callback {
         override fun surfaceCreated(holder: SurfaceHolder) {
             val surface = holder.surface
@@ -31,13 +31,13 @@ class MainActivity : AppCompatActivity() {
             val xdpi = displayMetrics.xdpi
             val ydpi = displayMetrics.ydpi
             Log.i(TAG, "Runtime initializing..")
-            if(anbox.initRuntime(mSurfaceView.width, mSurfaceView.height, xdpi.toInt(), ydpi.toInt())) {
-                anbox.createSurface(surface)
-                anbox.startRuntime()
-                anbox.startContainer()
+            if(Anbox.initRuntime(mSurfaceView.width, mSurfaceView.height, xdpi.toInt(), ydpi.toInt())) {
+                Anbox.createSurface(surface)
+                Anbox.startRuntime()
+                Anbox.startContainer()
             }
             else {
-                anbox.createSurface(surface)
+                Anbox.createSurface(surface)
             }
         }
 
@@ -50,7 +50,7 @@ class MainActivity : AppCompatActivity() {
 
         override fun surfaceDestroyed(holder: SurfaceHolder) {
 //            Renderer.removeWindow(holder.surface)
-            anbox.destroySurface()
+            Anbox.destroySurface()
             Log.i(TAG, "surfaceDestroyed!")
         }
     }
@@ -66,8 +66,6 @@ class MainActivity : AppCompatActivity() {
             WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
         windowInsetsController.hide(WindowInsetsCompat.Type.systemBars())
 
-        anbox = Anbox(applicationContext);
-
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
@@ -75,16 +73,16 @@ class MainActivity : AppCompatActivity() {
         mSurfaceView.getHolder().addCallback(mSurfaceCallback)
         binding.root.addView(mSurfaceView, 0)
 
-    }
-
-    override fun onResume() {
-        super.onResume()
-        mSurfaceView.setOnTouchListener(anbox)
+        // put in onResume?
+        mSurfaceView.setOnTouchListener(Anbox)
+        binding.fab.setOnClickListener {
+            startActivity(Intent(applicationContext, SettingsActivity::class.java))
+        }
     }
 
     override fun onDestroy() {
         super.onDestroy()
-        anbox.stopRuntime()
-        anbox.stopContainer()
+        Anbox.stopRuntime()
+        Anbox.stopContainer()
     }
 }

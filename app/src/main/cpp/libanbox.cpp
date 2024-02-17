@@ -57,7 +57,7 @@ void logger_write(const emugl::LogLevel &level, const char *format, ...) {
             __android_log_print(ANDROID_LOG_DEBUG, TAG, "%s", message);
             break;
         case emugl::LogLevel::TRACE:
-            __android_log_print(ANDROID_LOG_VERBOSE, TAG, "%s", message);
+//            __android_log_print(ANDROID_LOG_VERBOSE, TAG, "%s", message);
             break;
         default:
             break;
@@ -103,7 +103,7 @@ Java_com_github_ananbox_Anbox_initRuntime(
 //        return false;
 //    }
     if (rt != NULL)
-        return true;
+        return false;
     set_emugl_logger(logger_write);
     set_emugl_cxt_logger(logger_write);
 
@@ -320,4 +320,5 @@ Java_com_github_ananbox_Anbox_destroySurface(JNIEnv *env, jobject thiz) {
     unRegisterLayerComposer();
     renderer_->destroyNativeWindow(native_window);
     ANativeWindow_release(native_window);
+    native_window = NULL;
 }

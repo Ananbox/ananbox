@@ -1,0 +1,9 @@
+<PreferenceScreen
+    xmlns:app="http://schemas.android.com/apk/res-auto">
+
+    <Preference
+        app:key="@string/settings_shutdown_key"
+        app:title="@string/settings_shutdown_title"
+        app:summary="@string/settings_shutdown_summary"/>
+
+</PreferenceScreen>
