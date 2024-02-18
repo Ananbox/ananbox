@@ -36,6 +36,7 @@ class BinderReceiver : BroadcastReceiver() {
                 Log.d(tag, "receive localBinder")
                 // `spinlock` ensures that remoteBinder isn't NULL
                 while (remoteBinder == null) {
+                    Thread.sleep(500)
                 }
                 ILocalInterface.Stub.asInterface(localBinder).onReceiveBinder(remoteBinder)
                 Log.d(tag, "remoteBinder sent");
