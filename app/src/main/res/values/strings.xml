@@ -5,4 +5,10 @@
     <string name="settings_shutdown_key">shutdown</string>
     <string name="settings_shutdown_title">Shutdown</string>
     <string name="settings_shutdown_summary">Shutdown Ananbox immediately</string>
+    <string name="rom_installer_title">Install rom</string>
+    <string name="rom_installer_message">Please select a rom file (.7z) on your phone</string>
+    <string name="rom_installer_install">Select a file</string>
+    <string name="rom_installer_extracting_title">Extracting</string>
+    <string name="rom_installer_extracting_msg">Extracting rom file..</string>
+    <string name="cancel">Cancel</string>
 </resources>

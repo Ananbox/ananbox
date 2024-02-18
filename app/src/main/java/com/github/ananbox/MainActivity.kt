@@ -1,26 +1,31 @@
 package com.github.ananbox
 
-import android.annotation.SuppressLint
-import android.app.ActivityManager
+import android.app.Activity
+import android.app.AlertDialog
+import android.app.ProgressDialog
+import android.content.DialogInterface
 import android.content.Intent
 import android.os.Bundle
 import android.util.DisplayMetrics
 import android.util.Log
-import android.view.MotionEvent
 import android.view.SurfaceHolder
 import android.view.SurfaceView
-import android.view.View
-import android.view.ViewConfiguration
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
 import com.github.ananbox.databinding.ActivityMainBinding
+import com.hzy.libp7zip.P7ZipApi
 import java.io.File
+import java.lang.String
+import java.util.Locale
+import kotlin.concurrent.thread
+
 
 class MainActivity : AppCompatActivity() {
 
     private val TAG = "MainActivity"
+    private val READ_REQUEST_CODE = 2
     private lateinit var mSurfaceView: SurfaceView
     private val mSurfaceCallback: SurfaceHolder.Callback = object : SurfaceHolder.Callback {
         override fun surfaceCreated(holder: SurfaceHolder) {
@@ -70,6 +75,29 @@ class MainActivity : AppCompatActivity() {
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
+        if (!File(filesDir, "rootfs").exists()) {
+            AlertDialog.Builder(this)
+                .apply {
+                    setTitle(getString(R.string.rom_installer_title))
+                    setMessage(getString(R.string.rom_installer_message))
+                    setPositiveButton(R.string.rom_installer_install) { dialogInterface: DialogInterface, i: Int ->
+                        startActivityForResult(
+                            Intent(Intent.ACTION_OPEN_DOCUMENT)
+                                .apply {
+                                    addCategory(Intent.CATEGORY_OPENABLE)
+                                    setType("application/x-7z-compressed")
+                                },
+                            READ_REQUEST_CODE
+                        )
+                    }
+                    setNegativeButton(R.string.cancel) { dialogInterface: DialogInterface, i: Int ->
+                        finishAffinity()
+                    }
+                    show()
+                }
+            return
+        }
+
         mSurfaceView = SurfaceView(this)
         mSurfaceView.getHolder().addCallback(mSurfaceCallback)
         binding.root.addView(mSurfaceView, 0)
@@ -84,6 +112,42 @@ class MainActivity : AppCompatActivity() {
     override fun onDestroy() {
         super.onDestroy()
         Anbox.stopRuntime()
-        Anbox.stopContainer()
+    }
+
+    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+        super.onActivityResult(requestCode, resultCode, data)
+        if (requestCode == READ_REQUEST_CODE) {
+            if (resultCode != Activity.RESULT_OK || data == null) {
+                finishAffinity()
+                return
+            }
+            val uri = data.data
+            if (uri != null) {
+                val progressDialog = ProgressDialog(this).apply {
+                    setTitle(getString(R.string.rom_installer_extracting_title))
+                    setMessage(getString(R.string.rom_installer_extracting_msg))
+                    setProgressStyle(ProgressDialog.STYLE_SPINNER)
+                    show()
+                }
+                thread {
+                    val romFile = File(filesDir, "rootfs.7z")
+                    val inputStream = contentResolver.openInputStream(uri)
+                    val outputStream = romFile.outputStream()
+                    if (inputStream != null) {
+                        inputStream.copyTo(outputStream)
+                        val cpu = Runtime.getRuntime().availableProcessors()
+                        P7ZipApi.executeCommand(
+                            String.format(
+                                Locale.US, "7z x -mmt=%d -aoa '%s' '-o%s'",
+                                cpu, romFile.absolutePath, filesDir
+                            )
+                        )
+                        progressDialog.dismiss()
+                        romFile.delete()
+                        runOnUiThread() { recreate() }
+                    }
+                }
+            }
+        }
     }
 }
