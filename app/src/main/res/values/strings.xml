@@ -3,6 +3,6 @@
     <string name="title_settings">Settings</string>
     <string name="title_activity_settings">SettingsActivity</string>
     <string name="settings_shutdown_key">shutdown</string>
-    <string name="settings_shutdown_title">shutdown</string>
+    <string name="settings_shutdown_title">Shutdown</string>
     <string name="settings_shutdown_summary">Shutdown Ananbox immediately</string>
 </resources>

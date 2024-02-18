@@ -16,6 +16,7 @@ import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
 import com.github.ananbox.databinding.ActivityMainBinding
+import java.io.File
 
 class MainActivity : AppCompatActivity() {
 
@@ -34,8 +35,7 @@ class MainActivity : AppCompatActivity() {
             if(Anbox.initRuntime(mSurfaceView.width, mSurfaceView.height, xdpi.toInt(), ydpi.toInt())) {
                 Anbox.createSurface(surface)
                 Anbox.startRuntime()
-//                Log.d("anbox", applicationContext.applicationInfo.nativeLibraryDir + "/libproot.so")
-                Anbox.startContainer()
+                Anbox.startContainer(applicationContext.applicationInfo.nativeLibraryDir + "/libproot.so")
             }
             else {
                 Anbox.createSurface(surface)

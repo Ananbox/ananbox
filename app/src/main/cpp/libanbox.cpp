@@ -180,53 +180,18 @@ Java_com_github_ananbox_Anbox_initRuntime(
 }
 extern "C"
 JNIEXPORT void JNICALL
-Java_com_github_ananbox_Anbox_startContainer(JNIEnv *env, jobject thiz) {
+Java_com_github_ananbox_Anbox_startContainer(JNIEnv *env, jobject thiz, jstring proot_) {
+    char cmd[255];
     if (fork() != 0) {
         return;
     }
-    chdir(path);
-//    char *argv[] = {
-//            "proot",
-//            "--kill-on-exit",
-//            "-v",
-//            "255",
-//            "-r",
-//            "./rootfs",
-//            "-0",
-//            "-w",
-//            "/",
-//            "-b",
-//            "/dev",
-//            "-b",
-//            "/proc",
-//            "-b",
-//            "/sys",
-//            "-b",
-//            "./rootfs/dev/kmsg:/dev/kmsg",
-//            "-b",
-//            "./rootfs/dev/__properties__:/dev/__properties__",
-//            "-b",
-//            "./rootfs/dev/socket:/dev/socket",
-//            "-b",
-//            "/dev/binder:/dev/binder",
-//            "-b",
-//            "/dev/ashmem:/dev/ashmem",
-//            "-b",
-//            "./qemu_pipe:/dev/qemu_pipe",
-//            "-b",
-//            "./rootfs/dev/input:/dev/input",
-//            "/init",
-//            NULL
-//            };
-//    if (execv("./proot", argv) == -1) {
-//        __android_log_print(ANDROID_LOG_ERROR, TAG, "proot excuted failed: %s", strerror(errno));
-//    }
-    // Clear signals which the Android java process may have blocked:
     sigset_t signals_to_unblock;
     sigfillset(&signals_to_unblock);
     sigprocmask(SIG_UNBLOCK, &signals_to_unblock, 0);
-    setsid();
-    execl("/system/bin/sh", "sh", "-c", "sh run.sh", 0);
+    const char *proot = env->GetStringUTFChars(proot_, 0);
+    sprintf(cmd, "sh %s/rootfs/run.sh %s", path, proot);
+    env->ReleaseStringUTFChars(proot_, proot);
+    execl("/system/bin/sh", "sh", "-c", cmd, 0);
     __android_log_print(ANDROID_LOG_ERROR, TAG, "proot excuted failed: %s", strerror(errno));
  }
 extern "C"

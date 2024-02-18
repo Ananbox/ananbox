@@ -17,7 +17,7 @@ object Anbox: View.OnTouchListener {
     external fun startRuntime()
     external fun destroyWindow()
     external fun stopRuntime()
-    external fun startContainer()
+    external fun startContainer(proot: String)
     external fun resetWindow(height: Int, width: Int)
     external fun createSurface(surface: Surface)
     external fun destroySurface()
