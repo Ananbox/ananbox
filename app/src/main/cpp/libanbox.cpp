@@ -95,8 +95,7 @@ Java_com_github_ananbox_Anbox_initRuntime(
         jobject thiz,
         jint width,
         jint height,
-        jint dpiX,
-        jint dpiY) {
+        jint dpi) {
 //    auto gl_libs = anbox::graphics::emugl::default_gl_libraries();
 //    if (!anbox::graphics::emugl::initialize(gl_libs, nullptr, nullptr)) {
 //        __android_log_print(ANDROID_LOG_ERROR, TAG, "Failed to initialize OpenGL renderer");
@@ -118,7 +117,7 @@ Java_com_github_ananbox_Anbox_initRuntime(
     frame->resize(width, height);
     auto display_info_ = anbox::graphics::emugl::DisplayInfo::get();
     display_info_->set_resolution(width, height);
-    display_info_->set_dpi(dpiX, dpiY);
+    display_info_->set_dpi(dpi);
 
     renderer_->initialize(EGL_DEFAULT_DISPLAY);
     registerRenderer(renderer_);

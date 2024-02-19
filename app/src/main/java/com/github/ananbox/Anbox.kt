@@ -22,7 +22,7 @@ object Anbox: View.OnTouchListener {
     external fun createSurface(surface: Surface)
     external fun destroySurface()
     // pipe including Renderer, GPS & Sensor, input manager
-    external fun initRuntime(width: Int, height: Int, xDpi: Int, yDpi: Int): Boolean
+    external fun initRuntime(width: Int, height: Int, dpi: Int): Boolean
     external fun pushFingerUp(i: Int)
     external fun pushFingerDown(x: Int, y: Int, fingerId: Int)
     external fun pushFingerMotion(x: Int, y: Int, fingerId: Int)

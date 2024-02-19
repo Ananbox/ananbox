@@ -20,6 +20,7 @@ import java.io.File
 import java.lang.String
 import java.util.Locale
 import kotlin.concurrent.thread
+import kotlin.system.exitProcess
 
 
 class MainActivity : AppCompatActivity() {
@@ -34,10 +35,9 @@ class MainActivity : AppCompatActivity() {
             val defaultDisplay = windowManager.defaultDisplay
             val displayMetrics = DisplayMetrics()
             defaultDisplay.getRealMetrics(displayMetrics)
-            val xdpi = displayMetrics.xdpi
-            val ydpi = displayMetrics.ydpi
+            val dpi = displayMetrics.densityDpi
             Log.i(TAG, "Runtime initializing..")
-            if(Anbox.initRuntime(mSurfaceView.width, mSurfaceView.height, xdpi.toInt(), ydpi.toInt())) {
+            if(Anbox.initRuntime(mSurfaceView.width, mSurfaceView.height, dpi)) {
                 Anbox.createSurface(surface)
                 Anbox.startRuntime()
                 Anbox.startContainer(applicationContext.applicationInfo.nativeLibraryDir + "/libproot.so")
@@ -92,6 +92,7 @@ class MainActivity : AppCompatActivity() {
                     }
                     setNegativeButton(R.string.cancel) { dialogInterface: DialogInterface, i: Int ->
                         finishAffinity()
+                        exitProcess(0)
                     }
                     show()
                 }
