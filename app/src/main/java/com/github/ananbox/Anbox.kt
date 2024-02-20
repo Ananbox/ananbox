@@ -14,6 +14,7 @@ object Anbox: View.OnTouchListener {
     }
 
     external fun stringFromJNI(): String
+    external fun setPath(path: String)
     external fun startRuntime()
     external fun destroyWindow()
     external fun stopRuntime()

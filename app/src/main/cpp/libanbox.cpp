@@ -19,7 +19,7 @@
 #include <android/native_window_jni.h>
 #define TAG "libAnbox"
 
-const char *const path = "/data/data/com.github.ananbox/files";
+//const char *const path = "/data/data/com.github.ananbox/files";
 
 static const int MAX_FINGERS = 10;
 static const int MAX_TRACKING_ID = 10;
@@ -31,6 +31,7 @@ static std::shared_ptr<::Renderer> renderer_;
 static std::shared_ptr<anbox::network::PublishedSocketConnector> qemu_pipe_connector_;
 static std::shared_ptr<anbox::input::Device> touch_;
 static ANativeWindow* native_window;
+static char path[255];
 
 
 void logger_write(const emugl::LogLevel &level, const char *format, ...) {
@@ -188,7 +189,7 @@ Java_com_github_ananbox_Anbox_startContainer(JNIEnv *env, jobject thiz, jstring 
     sigfillset(&signals_to_unblock);
     sigprocmask(SIG_UNBLOCK, &signals_to_unblock, 0);
     const char *proot = env->GetStringUTFChars(proot_, 0);
-    sprintf(cmd, "sh %s/rootfs/run.sh %s", path, proot);
+    sprintf(cmd, "sh %s/rootfs/run.sh %s %s", path, path, proot);
     env->ReleaseStringUTFChars(proot_, proot);
     execl("/system/bin/sh", "sh", "-c", cmd, 0);
     __android_log_print(ANDROID_LOG_ERROR, TAG, "proot excuted failed: %s", strerror(errno));
@@ -285,4 +286,12 @@ Java_com_github_ananbox_Anbox_destroySurface(JNIEnv *env, jobject thiz) {
     renderer_->destroyNativeWindow(native_window);
     ANativeWindow_release(native_window);
     native_window = NULL;
+}
+
+extern "C"
+JNIEXPORT void JNICALL
+Java_com_github_ananbox_Anbox_setPath(JNIEnv *env, jobject thiz, jstring path_) {
+    const char *pathStr = env->GetStringUTFChars(path_, 0);
+    memcpy(path, pathStr, strlen(pathStr) + 1);
+    env->ReleaseStringUTFChars(path_, pathStr);
 }

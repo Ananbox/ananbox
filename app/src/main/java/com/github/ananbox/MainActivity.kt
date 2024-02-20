@@ -100,6 +100,8 @@ class MainActivity : AppCompatActivity() {
             return
         }
 
+        Anbox.setPath(filesDir.path)
+
         mSurfaceView = SurfaceView(this)
         mSurfaceView.getHolder().addCallback(mSurfaceCallback)
         binding.root.addView(mSurfaceView, 0)
