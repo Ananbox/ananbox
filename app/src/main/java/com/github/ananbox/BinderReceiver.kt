@@ -30,20 +30,15 @@ class BinderReceiver : BroadcastReceiver() {
             Log.e(tag, "contextMgr has been set");
             return
         }
-        thread {
-            val localBinder = intent.extras?.getBinder("local")
-            if (localBinder != null) {
-                Log.d(tag, "receive localBinder")
-                // `spinlock` ensures that remoteBinder isn't NULL
-                while (remoteBinder == null) {
-                    Thread.sleep(500)
-                }
-                ILocalInterface.Stub.asInterface(localBinder).onReceiveBinder(remoteBinder)
-                Log.d(tag, "remoteBinder sent");
-            }
-            else {
-                Log.e(tag, "Empty broadcast");
-            }
+
+        val localBinder = intent.extras?.getBinder("local")
+        if (localBinder != null) {
+            Log.d(tag, "receive localBinder")
+            ILocalInterface.Stub.asInterface(localBinder).onReceiveBinder(remoteBinder)
+            Log.d(tag, "remoteBinder sent");
+        }
+        else {
+            Log.e(tag, "Empty broadcast");
         }
     }
 }
