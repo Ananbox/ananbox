@@ -5,7 +5,11 @@ set(PROOT_BIN ${CMAKE_CURRENT_BINARY_DIR}/proot-prefix/src/proot-build)
 set(PROOT_C_FLAGS "-I${TALLOC_INCLUDE_DIRS} -I${PROOT_SRC} -D_GNU_SOURCE")
 set(PROOT_LINKER_FLAGS "-L${TALLOC_BIN}/lib -ltalloc")
 # specific correct clang target to use
-set(PROOT_C_COMPILER ${ANDROID_TOOLCHAIN_ROOT}/bin/${CMAKE_ANDROID_ARCH_ABI}-linux-android${CMAKE_SYSTEM_VERSION}-clang)
+if(${CMAKE_ANDROID_ARCH_ABI} STREQUAL "arm64-v8a")
+    set(PROOT_C_COMPILER ${ANDROID_TOOLCHAIN_ROOT}/bin/aarch64-linux-android${CMAKE_SYSTEM_VERSION}-clang)
+else()
+    set(PROOT_C_COMPILER ${ANDROID_TOOLCHAIN_ROOT}/bin/${CMAKE_ANDROID_ARCH_ABI}-linux-android${CMAKE_SYSTEM_VERSION}-clang)
+endif()
 ExternalProject_Add(
         proot
         GIT_REPOSITORY https://github.com/Ananbox/proot.git
