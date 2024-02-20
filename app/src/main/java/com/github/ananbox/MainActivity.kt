@@ -94,6 +94,7 @@ class MainActivity : AppCompatActivity() {
                         finishAffinity()
                         exitProcess(0)
                     }
+                    setCancelable(false)
                     show()
                 }
             return
@@ -128,10 +129,12 @@ class MainActivity : AppCompatActivity() {
                     setTitle(getString(R.string.rom_installer_extracting_title))
                     setMessage(getString(R.string.rom_installer_extracting_msg))
                     setProgressStyle(ProgressDialog.STYLE_SPINNER)
+                    setCanceledOnTouchOutside(false)
                     show()
                 }
                 thread {
                     val romFile = File(filesDir, "rootfs.7z")
+                    val tmpDir = File(filesDir, "tmp")
                     val inputStream = contentResolver.openInputStream(uri)
                     val outputStream = romFile.outputStream()
                     if (inputStream != null) {
@@ -145,6 +148,7 @@ class MainActivity : AppCompatActivity() {
                         )
                         progressDialog.dismiss()
                         romFile.delete()
+                        tmpDir.mkdir()
                         runOnUiThread() { recreate() }
                     }
                 }
