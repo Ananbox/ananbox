@@ -25,6 +25,18 @@
             android:name=".BinderReceiver"
             android:enabled="true"
             android:exported="true" />
+add
+        <provider
+            android:name=".StorageProvider"
+            android:authorities="com.github.ananbox.documents"
+            android:exported="true"
+            android:grantUriPermissions="true"
+            android:permission="android.permission.MANAGE_DOCUMENTS">
+            <intent-filter>
+                <action android:name="android.content.action.DOCUMENTS_PROVIDER" />
+            </intent-filter>
+        </provider>
+
 
         <activity
             android:name=".MainActivity"
