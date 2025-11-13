@@ -29,7 +29,7 @@ set(BOOST_INCLUDE_LIBRARIES
         asio
         filesystem
         log
-        log_setup
+        #log_setup
         serialization
         system
         thread

@@ -68,6 +68,7 @@ if(CMAKE_SYSTEM_PROCESSOR STREQUAL "x86_64")
     ${SAPI_LIBUNWIND_SOURCE_DIR}/src/x86_64/Gstep.c
     ${SAPI_LIBUNWIND_SOURCE_DIR}/src/x86_64/is_fpreg.c
     ${SAPI_LIBUNWIND_SOURCE_DIR}/src/x86_64/setcontext.S
+    ${SAPI_LIBUNWIND_SOURCE_DIR}/src/x86_64/getcontext.S
   )
   list(APPEND _unwind_ptrace_srcs
     ${SAPI_LIBUNWIND_SOURCE_DIR}/src/x86_64/Ginit_remote.c
