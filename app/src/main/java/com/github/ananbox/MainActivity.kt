@@ -1,10 +1,12 @@
 package com.github.ananbox
 
+import android.Manifest
 import android.app.Activity
 import android.app.AlertDialog
 import android.app.ProgressDialog
 import android.content.DialogInterface
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.os.Bundle
 import android.util.DisplayMetrics
 import android.util.Log
@@ -110,6 +112,13 @@ class MainActivity : AppCompatActivity() {
         mSurfaceView.setOnTouchListener(Anbox)
         binding.fab.setOnClickListener {
             startActivity(Intent(applicationContext, SettingsActivity::class.java))
+        }
+    }
+
+    override fun onResume() {
+        super.onResume()
+        if (checkSelfPermission(Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+            requestPermissions(arrayOf(Manifest.permission.ACCESS_COARSE_LOCATION), 1);
         }
     }
 
