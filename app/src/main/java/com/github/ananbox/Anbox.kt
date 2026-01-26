@@ -1,6 +1,7 @@
 package com.github.ananbox
 
 import android.content.Context
+import android.os.Build
 import android.util.Log
 import android.view.MotionEvent
 import android.view.Surface
@@ -11,6 +12,9 @@ import kotlin.system.exitProcess
 object Anbox: View.OnTouchListener {
     init {
         System.loadLibrary("anbox")
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            BinderTest.dumpBroadcastParcel()
+        }
     }
 
     external fun stringFromJNI(): String

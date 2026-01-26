@@ -3,9 +3,9 @@ package com.github.ananbox
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
+import android.os.Binder
 import android.os.IBinder
 import android.util.Log
-import kotlin.concurrent.thread
 
 class BinderReceiver : BroadcastReceiver() {
     companion object {
@@ -33,7 +33,7 @@ class BinderReceiver : BroadcastReceiver() {
 
         val localBinder = intent.extras?.getBinder("local")
         if (localBinder != null) {
-            Log.d(tag, "receive localBinder")
+            Log.d(tag, "receive localBinder, pid: " + Binder.getCallingPid())
             ILocalInterface.Stub.asInterface(localBinder).onReceiveBinder(remoteBinder)
             Log.d(tag, "remoteBinder sent");
         }
