@@ -7,6 +7,7 @@ import android.app.ProgressDialog
 import android.content.DialogInterface
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.os.Build
 import android.os.Bundle
 import android.util.DisplayMetrics
 import android.util.Log
@@ -42,6 +43,10 @@ class MainActivity : AppCompatActivity() {
             if(Anbox.initRuntime(mSurfaceView.width, mSurfaceView.height, dpi)) {
                 Anbox.createSurface(surface)
                 Anbox.startRuntime()
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                    ParcelConstructor.getBroadcastIntent("local")
+                    ParcelConstructor.getBroadcastIntent("binder")
+                }
                 Anbox.startContainer(applicationContext.applicationInfo.nativeLibraryDir + "/libproot.so")
             }
             else {

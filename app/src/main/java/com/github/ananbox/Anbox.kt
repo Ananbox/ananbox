@@ -1,20 +1,16 @@
 package com.github.ananbox
 
-import android.content.Context
 import android.os.Build
+import android.os.Parcel
 import android.util.Log
 import android.view.MotionEvent
 import android.view.Surface
-import android.os.Process
 import android.view.View
 import kotlin.system.exitProcess
 
 object Anbox: View.OnTouchListener {
     init {
         System.loadLibrary("anbox")
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-            BinderTest.dumpBroadcastParcel()
-        }
     }
 
     external fun stringFromJNI(): String
@@ -31,6 +27,7 @@ object Anbox: View.OnTouchListener {
     external fun pushFingerUp(i: Int)
     external fun pushFingerDown(x: Int, y: Int, fingerId: Int)
     external fun pushFingerMotion(x: Int, y: Int, fingerId: Int)
+    external fun dumpParcel(parcel: Parcel, path: String)
 
     fun stopContainer() {
         Log.d("Anbox", "stopContainer")

@@ -17,9 +17,23 @@
 #include "external/android-emugl/shared/emugl/common/logging.h"
 #include <android/log.h>
 #include <android/native_window_jni.h>
+#include "Parcel.h"
 #define TAG "libAnbox"
 
-//const char *const path = "/data/data/com.github.ananbox/files";
+#define ALOGI(...) __android_log_print(ANDROID_LOG_INFO, TAG, __VA_ARGS__)
+#define __android_second(dummy, second, ...)     second
+#define __android_rest(first, ...)               , ## __VA_ARGS__
+#define android_printAssert(cond, tag, fmt...) \
+    __android_log_assert(cond, tag, \
+        __android_second(0, ## fmt, NULL) __android_rest(fmt))
+
+#define CONDITION(cond)     (__builtin_expect((cond)!=0, 0))
+#ifndef LOG_ALWAYS_FATAL_IF
+#define LOG_ALWAYS_FATAL_IF(cond, ...) \
+    ( (CONDITION(cond)) \
+    ? ((void)android_printAssert(#cond, TAG, ## __VA_ARGS__)) \
+    : (void)0 )
+#endif
 
 static const int MAX_FINGERS = 10;
 static const int MAX_TRACKING_ID = 10;
@@ -294,4 +308,53 @@ Java_com_github_ananbox_Anbox_setPath(JNIEnv *env, jobject thiz, jstring path_) 
     const char *pathStr = env->GetStringUTFChars(path_, 0);
     memcpy(path, pathStr, strlen(pathStr) + 1);
     env->ReleaseStringUTFChars(path_, pathStr);
+}
+
+static inline jclass FindClassOrDie(JNIEnv* env, const char* class_name) {
+    jclass clazz = env->FindClass(class_name);
+    LOG_ALWAYS_FATAL_IF(clazz == NULL, "Unable to find class %s", class_name);
+    return clazz;
+}
+
+
+static inline jfieldID GetFieldIDOrDie(JNIEnv* env, jclass clazz, const char* field_name,
+                                       const char* field_signature) {
+    jfieldID res = env->GetFieldID(clazz, field_name, field_signature);
+    LOG_ALWAYS_FATAL_IF(res == NULL,"Unable to find field %s with signature %s", field_name,field_signature);
+    return res;
+}
+
+extern "C"
+JNIEXPORT void JNICALL
+Java_com_github_ananbox_Anbox_dumpParcel(JNIEnv *env, jobject thiz, jobject jparcel, jstring jpath) {
+    const char* const kParcelPathName = "android/os/Parcel";
+    jclass parcel_clazz = FindClassOrDie(env, kParcelPathName);
+    jfieldID  parcel_mNativePtr = GetFieldIDOrDie(env, parcel_clazz, "mNativePtr", "J");
+
+    Parcel* parcel = (Parcel*) env->GetLongField(jparcel, parcel_mNativePtr);
+    if (parcel == nullptr) {
+        ALOGI("error,  Parcel/mNativePtr is null");
+        return;
+    }
+
+    ALOGI("mdata: %p", parcel->mData);
+    ALOGI("mdataPos: %d", parcel->mDataPos);
+    ALOGI("mdataSize: %d", parcel->mDataSize);
+    ALOGI("mdataCapacity: %d", parcel->mDataCapacity);
+    ALOGI("mObject: %p", *parcel->mObjects);
+    ALOGI("mObjectSize: %d", parcel->mObjectsSize);
+
+    const char *path = env->GetStringUTFChars(jpath, 0);
+    int fd = open(path, O_CREAT | O_WRONLY, 0700);
+    if (fd < 0) {
+        __android_log_print(ANDROID_LOG_ERROR, TAG, "failed to open file, err :%d", errno);
+    }
+    else {
+        write(fd, &parcel->mDataSize, sizeof(int64_t));
+        write(fd, &parcel->mObjectsSize, sizeof(int64_t));
+        write(fd, parcel->mData, parcel->mDataSize);
+        write(fd, parcel->mObjects, parcel->mObjectsSize * sizeof(int64_t));
+        close(fd);
+    }
+    env->ReleaseStringUTFChars(jpath, path);
 }
