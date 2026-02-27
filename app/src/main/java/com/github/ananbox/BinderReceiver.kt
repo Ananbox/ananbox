@@ -5,6 +5,7 @@ import android.content.Context
 import android.content.Intent
 import android.os.Binder
 import android.os.IBinder
+import android.os.RemoteException
 import android.util.Log
 
 class BinderReceiver : BroadcastReceiver() {
@@ -34,8 +35,12 @@ class BinderReceiver : BroadcastReceiver() {
         val localBinder = intent.extras?.getBinder("local")
         if (localBinder != null) {
             Log.d(tag, "receive localBinder, pid: " + Binder.getCallingPid())
-            ILocalInterface.Stub.asInterface(localBinder).onReceiveBinder(remoteBinder)
-            Log.d(tag, "remoteBinder sent");
+            try {
+                ILocalInterface.Stub.asInterface(localBinder).onReceiveBinder(remoteBinder)
+                Log.d(tag, "remoteBinder sent");
+            } catch (e: RemoteException) {
+                Log.e(tag, "remoteBinder send failed");
+            }
         }
         else {
             Log.e(tag, "Empty broadcast");
