@@ -43,10 +43,6 @@ class MainActivity : AppCompatActivity() {
             if(Anbox.initRuntime(mSurfaceView.width, mSurfaceView.height, dpi)) {
                 Anbox.createSurface(surface)
                 Anbox.startRuntime()
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-                    ParcelConstructor.getBroadcastIntent("local")
-                    ParcelConstructor.getBroadcastIntent("binder")
-                }
                 Anbox.startContainer(applicationContext.applicationInfo.nativeLibraryDir + "/libproot.so")
             }
             else {
@@ -162,6 +158,14 @@ class MainActivity : AppCompatActivity() {
                                 cpu, romFile.absolutePath, filesDir
                             )
                         )
+
+                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                            ParcelConstructor.getBroadcastIntent("local")
+                            ParcelConstructor.getBroadcastIntent("binder")
+                        }
+                        val codeFile = File(filesDir, "rootfs/trans_code")
+                        codeFile.writeText(Anbox.getBroadcastIntentTransactionCode().toString())
+
                         progressDialog.dismiss()
                         romFile.delete()
                         tmpDir.mkdir()
