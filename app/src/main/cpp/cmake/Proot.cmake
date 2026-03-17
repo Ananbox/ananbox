@@ -14,7 +14,7 @@ endif()
 ExternalProject_Add(
         proot
         GIT_REPOSITORY https://github.com/Ananbox/proot.git
-        GIT_TAG 1a6873987f02139f2f9fb64a03ec940dae57ab
+        GIT_TAG 8c60d0287ce9ece3f21df1dc60de55e33f6bdba3
         GIT_SHALLOW 1
         CONFIGURE_COMMAND cd ${PROOT_SRC} && make clean
         BUILD_COMMAND cd ${PROOT_SRC} && make V=1 CC=${PROOT_C_COMPILER} LD=${PROOT_C_COMPILER} STRIP=${CMAKE_STRIP} OBJCOPY=${CMAKE_OBJCOPY} OBJDUMP=${CMAKE_OBJDUMP} CFLAGS=${PROOT_C_FLAGS} LDFLAGS=${PROOT_LINKER_FLAGS}
