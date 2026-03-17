@@ -2,12 +2,12 @@
 
 **Another rootless Android container on android**
 
-Ananbox is a fork version of Anbox, with some modifications to get it run on Android rootlessly. And proot is now used to enforce the storage isolation.
+Ananbox is a fork version of Anbox, with some modifications to get it run on Android rootlessly. And it uses proot for storage isolation and basic capbilities emulation.
 
 ## Status
 WIP. The container can boot, but still buggy.
 
-Most of the Android security features are missing becuase the current implementation of binder inside the container.
+Part of the Android security features are missing becuase of the current implementation of binder inside the container.
 
 ### Supported System Component
 - Binder
@@ -15,9 +15,8 @@ Most of the Android security features are missing becuase the current implementa
 - Wifi Simulation (still buggy)
 
 ### Supported Host Android version
-Android 11, 12
 
-(More version is coming soon.., theoretically it can support android 7.0 and newer)
+Android 11 and newer
 
 ### Supported Architecture
 - x86_64
@@ -35,7 +34,15 @@ Click the bottom-right button to launch the Settings Activity, where you can shu
 
 ## Debug
 
-System.log is under `<internal storage>/rootfs/data`, proot.log is under `<internal storage>`
+**Make sure you submit these files in Github issue**
+
+Host-side Paths:
+
+- `/data/data/com.github.ananbox/files/rootfs/data/system.log`
+- `/data/data/com.github.ananbox/files/proot.log`
+- `/data/data/com.github.ananbox/files/rootfs/localBroadcastIntent`
+- `/data/data/com.github.ananbox/files/rootfs/binderBroadcastIntent`
+- `/data/data/com.github.ananbox/files/rootfs/trans_code`
 
 ## Preview
 
