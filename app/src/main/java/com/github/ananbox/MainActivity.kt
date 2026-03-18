@@ -163,7 +163,7 @@ class MainActivity : AppCompatActivity() {
                             ParcelConstructor.getBroadcastIntent("local")
                             ParcelConstructor.getBroadcastIntent("binder")
                         }
-                        val codeFile = File(filesDir, "rootfs/trans_code")
+                        val codeFile = File(filesDir.path + "/rootfs/trans_code")
                         codeFile.writeText(Anbox.getBroadcastIntentTransactionCode().toString())
 
                         progressDialog.dismiss()
