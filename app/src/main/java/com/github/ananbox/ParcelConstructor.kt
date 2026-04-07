@@ -15,11 +15,10 @@ object ParcelConstructor {
 
     @RequiresApi(Build.VERSION_CODES.Q)
     fun getBroadcastIntent(binderName: String) {
-        val intent: Intent = Intent()
+        val intent: Intent = Intent("com.github.ananbox.BINDER")
         val bundle1: Bundle = Bundle()
         val binder1: Binder = Binder()
         bundle1.putBinder(binderName, binder1)
-        intent.setComponent(ComponentName("com.github.ananbox", "com.github.ananbox.BinderReceiver"))
         intent.putExtras(bundle1)
 
         val _data: Parcel = Parcel.obtain()

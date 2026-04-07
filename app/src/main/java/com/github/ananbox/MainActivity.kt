@@ -4,16 +4,22 @@ import android.Manifest
 import android.app.Activity
 import android.app.AlertDialog
 import android.app.ProgressDialog
+import android.content.BroadcastReceiver
 import android.content.DialogInterface
 import android.content.Intent
+import android.content.IntentFilter
 import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Bundle
+import android.os.Handler
+import android.os.HandlerThread
 import android.util.DisplayMetrics
 import android.util.Log
 import android.view.SurfaceHolder
 import android.view.SurfaceView
+import androidx.annotation.RequiresApi
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.content.ContextCompat
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
@@ -65,9 +71,16 @@ class MainActivity : AppCompatActivity() {
     }
 
     private lateinit var binding: ActivityMainBinding
+    private val receiver = BinderReceiver()
+    private val handlerThread = HandlerThread("BinderReceiverThread")
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        handlerThread.start()
+        ContextCompat.registerReceiver(this ,receiver,
+            IntentFilter("com.github.ananbox.BINDER"),
+            null, Handler(handlerThread.looper),
+            ContextCompat.RECEIVER_EXPORTED)
 
         val windowInsetsController =
             WindowCompat.getInsetsController(window, window.decorView)
@@ -126,6 +139,7 @@ class MainActivity : AppCompatActivity() {
     override fun onDestroy() {
         super.onDestroy()
         Anbox.stopRuntime()
+        unregisterReceiver(receiver)
     }
 
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
