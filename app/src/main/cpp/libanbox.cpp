@@ -5,6 +5,9 @@
 #include <cerrno>
 #include <fcntl.h>
 #include <unistd.h>
+#include <csignal>
+#include <sys/prctl.h>
+#include <sys/wait.h>
 #include <android/input.h>
 #include "anbox/graphics/emugl/Renderer.h"
 #include "anbox/graphics/emugl/RenderApi.h"
@@ -12,6 +15,7 @@
 #include "anbox/network/published_socket_connector.h"
 #include "anbox/qemu/pipe_connection_creator.h"
 #include "anbox/runtime.h"
+#include "anbox/utils.h"
 #include "anbox/common/dispatcher.h"
 #include "anbox/input/manager.h"
 #include "anbox/input/device.h"
@@ -25,6 +29,8 @@
 #define TAG "libAnbox"
 
 #define ALOGI(...) __android_log_print(ANDROID_LOG_INFO, TAG, __VA_ARGS__)
+#define ALOGW(...) __android_log_print(ANDROID_LOG_WARN, TAG, __VA_ARGS__)
+#define ALOGE(...) __android_log_print(ANDROID_LOG_ERROR, TAG, __VA_ARGS__)
 #define __android_second(dummy, second, ...)     second
 #define __android_rest(first, ...)               , ## __VA_ARGS__
 #define android_printAssert(cond, tag, fmt...) \
@@ -51,6 +57,42 @@ static std::shared_ptr<anbox::input::Device> touch_;
 static ANativeWindow* native_window;
 static char path[255];
 
+// Handle to the process stopContainer() has to tear down. Only set by
+// startContainer() and consumed by stopContainer(), both on the UI thread.
+static pid_t container_pid = -1;
+
+// proot's event loop ignores every terminating signal (SIGTERM/SIGINT are set
+// to SIG_IGN), and its --kill-on-exit cleanup only runs on a normal exit or on
+// SIGQUIT/SIGILL/SIGABRT/SIGFPE/SIGSEGV. Anything else leaves the guest's init
+// and its children orphaned under /proc. See tracee/event.c in proot.
+static const int PROOT_QUIT = SIGQUIT;
+
+// Blocks until the forked shell exits. No polling: the shell is our child, so
+// waitpid() parks us until it is reaped. SIGQUIT shuts down the container
+// cleanly; SIGKILL is only for a proot wedged past the timeout.
+static void wait_for_exit(pid_t pid, int timeout_ms) {
+    int status = 0;
+    for (int waited = 0; waited < timeout_ms; waited += 100) {
+        pid_t ret = waitpid(pid, &status, WNOHANG);
+        if (ret == pid) {
+            if (WIFEXITED(status))
+                ALOGI("container host %d exited with status %d", (int)pid, WEXITSTATUS(status));
+            else if (WIFSIGNALED(status))
+                ALOGI("container host %d killed by signal %d", (int)pid, WTERMSIG(status));
+            return;
+        }
+        if (ret < 0) {
+            if (errno == EINTR)
+                continue;
+            // ECHILD: already reaped. Nothing left to wait for.
+            return;
+        }
+        usleep(100 * 1000);
+    }
+    ALOGW("container host %d still running, killing it", (int)pid);
+    kill(pid, SIGKILL);
+    waitpid(pid, &status, 0);
+}
 
 void logger_write(const emugl::LogLevel &level, const char *format, ...) {
     (void)level;
@@ -197,21 +239,91 @@ Java_com_github_ananbox_Anbox_initRuntime(
     return true;
 }
 extern "C"
-JNIEXPORT void JNICALL
+JNIEXPORT jint JNICALL
 Java_com_github_ananbox_Anbox_startContainer(JNIEnv *env, jobject thiz, jstring proot_) {
-    char cmd[255];
-    if (fork() != 0) {
-        return;
+    if (container_pid > 0) {
+        ALOGW("container already running as %d", (int)container_pid);
+        return (jint)container_pid;
     }
+
+    const char *proot = env->GetStringUTFChars(proot_, 0);
+    // Exec the script directly rather than through "sh -c": mksh forks a
+    // wrapper shell for the -c form, and that wrapper would be the pid we
+    // signal, while only the script below it carries proot and its trap.
+    std::string script = anbox::utils::string_format("%s/rootfs/run.sh", path);
+    std::string data_dir = path;
+    std::string proot_bin = proot;
+    env->ReleaseStringUTFChars(proot_, proot);
+
+    // Captured before fork(): in the child this is the parent's pid, which is
+    // what PR_SET_PDEATHSIG tracks. Using getpid() in the child would compare
+    // the child with itself and always look orphaned.
+    pid_t parent = getpid();
+
+    pid_t pid = fork();
+    if (pid != 0) {
+        if (pid > 0) {
+            container_pid = pid;
+            ALOGI("container host started as %d", (int)pid);
+        } else {
+            ALOGE("failed to fork container: %s", strerror(errno));
+        }
+        return (jint)pid;
+    }
+
     sigset_t signals_to_unblock;
     sigfillset(&signals_to_unblock);
     sigprocmask(SIG_UNBLOCK, &signals_to_unblock, 0);
-    const char *proot = env->GetStringUTFChars(proot_, 0);
-    sprintf(cmd, "sh %s/rootfs/run.sh %s %s", path, path, proot);
-    env->ReleaseStringUTFChars(proot_, proot);
-    execl("/system/bin/sh", "sh", "-c", cmd, 0);
+
+    // Last-resort cleanup for an app that dies without calling
+    // stopContainer() (kmem kill, force-stop, crash): the kernel signals us as
+    // soon as the forking thread goes away, so the container cannot outlive
+    // it. The setting survives execve, so the shell below inherits it.
+    //
+    // SIGQUIT, not SIGKILL: the shell forwards it to proot, whose handler runs
+    // the --kill-on-exit cleanup (init and everything else go with it). A
+    // SIGKILL would only take out the shell and orphan proot, which ignores
+    // every other terminating signal. See tracee/event.c in proot.
+    if (prctl(PR_SET_PDEATHSIG, PROOT_QUIT) != 0)
+        __android_log_print(ANDROID_LOG_ERROR, TAG, "PR_SET_PDEATHSIG failed: %s", strerror(errno));
+    // The parent may have died between fork() and the prctl() above, in which
+    // case no death signal will ever be delivered; check and bail out.
+    if (getppid() != parent) {
+        __android_log_print(ANDROID_LOG_ERROR, TAG, "parent %d gone before exec, aborting", (int)parent);
+        _exit(0);
+    }
+
+    execl("/system/bin/sh", "sh", script.c_str(), data_dir.c_str(),
+          proot_bin.c_str(), (char *)0);
     __android_log_print(ANDROID_LOG_ERROR, TAG, "proot excuted failed: %s", strerror(errno));
- }
+    _exit(127);
+}
+
+extern "C"
+JNIEXPORT void JNICALL
+Java_com_github_ananbox_Anbox_stopContainer(JNIEnv *env, jobject thiz) {
+    if (container_pid <= 0) {
+        ALOGI("no container to stop");
+        return;
+    }
+
+    pid_t pid = container_pid;
+    container_pid = -1;
+    ALOGI("stopping container %d", (int)pid);
+
+    // SIGQUIT is forwarded by run.sh to proot, whose handler kills every
+    // tracee (init included) before it exits. SIGTERM would be silently
+    // ignored by proot's event loop and leave the guest running.
+    if (kill(pid, PROOT_QUIT) != 0 && errno != ESRCH) {
+        ALOGE("failed to signal container %d: %s", (int)pid, strerror(errno));
+        return;
+    }
+
+    // run.sh is waiting on proot and exits right after it, and so does the
+    // shell we forked, so this bound is only a safety net.
+    wait_for_exit(pid, 10000);
+}
+
 extern "C"
 JNIEXPORT void JNICALL
 Java_com_github_ananbox_Anbox_resetWindow(JNIEnv *env, jobject thiz, jint height, jint width) {

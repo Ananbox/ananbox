@@ -6,6 +6,7 @@ import android.view.MenuItem
 import androidx.appcompat.app.AppCompatActivity
 import androidx.preference.Preference
 import androidx.preference.PreferenceFragmentCompat
+import kotlin.concurrent.thread
 
 class SettingsActivity : AppCompatActivity() {
 
@@ -18,7 +19,9 @@ class SettingsActivity : AppCompatActivity() {
             shutdown?.onPreferenceClickListener = Preference.OnPreferenceClickListener {
                 activity?.finishAffinity()
                 Anbox.stopRuntime()
-                Anbox.stopContainer()
+                // Off the UI thread: it blocks until the guest has exited and
+                // exitProcess() would drop the main thread otherwise (ANR).
+                thread { Anbox.shutdown() }
                 true
             }
 

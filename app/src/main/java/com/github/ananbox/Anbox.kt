@@ -20,7 +20,11 @@ object Anbox: View.OnTouchListener {
     external fun startRuntime()
     external fun destroyWindow()
     external fun stopRuntime()
-    external fun startContainer(proot: String)
+    // Returns the pid of the forked container host, or a negative errno.
+    external fun startContainer(proot: String): Int
+    // Signals the container, waits for it to exit and reaps it. Blocks for as
+    // long as the guest takes to shut down (bounded, see libanbox.cpp).
+    external fun stopContainer()
     external fun resetWindow(height: Int, width: Int)
     external fun createSurface(surface: Surface)
     external fun destroySurface()
@@ -35,10 +39,15 @@ object Anbox: View.OnTouchListener {
         parcel: Parcel, path: String, binderObjectIndex: Int, transactCode: Int
     ): Boolean
 
-    fun stopContainer() {
-        Log.d("Anbox", "stopContainer")
-        // TODO: better way to stop the container
-        Runtime.getRuntime().exec("killall init")
+    // Shut the container down and then the app. Must run off the UI thread:
+    // stopContainer() blocks until the guest is gone.
+    fun shutdown() {
+        Log.d("Anbox", "shutdown")
+        try {
+            stopContainer()
+        } catch (t: Throwable) {
+            Log.e("Anbox", "failed to stop container", t)
+        }
         exitProcess(0)
     }
 

@@ -139,6 +139,12 @@ class MainActivity : AppCompatActivity() {
     override fun onDestroy() {
         super.onDestroy()
         Anbox.stopRuntime()
+        // Leaving for good (back / recents swipe) used to leave the container
+        // running. Rotation and other config changes recreate the activity
+        // too, so only tear the guest down when actually finishing.
+        if (isFinishing) {
+            thread { Anbox.shutdown() }
+        }
         unregisterReceiver(receiver)
     }
 
