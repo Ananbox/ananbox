@@ -33,12 +33,12 @@ jobs:
           distribution: temurin
           java-version: '17'
 
-      # cmdline-tools 22.0 (the setup-android default) hard-fails here, so use
-      # the one preinstalled on the runner instead of re-installing it.
+      # setup-android's default cmdline-tools version (22.0) fails on the
+      # runner, and its version numbers must be the long form (the zip name).
       - name: Set up Android SDK
         uses: android-actions/setup-android@v3
         with:
-          cmdline-tools-version: '12.0'
+          cmdline-tools-version: '11076708'
           log-accepted-android-sdk-licenses: false
 
       - name: Install CMake, NDK and SDK components
