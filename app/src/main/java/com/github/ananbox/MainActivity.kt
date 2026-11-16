@@ -175,20 +175,16 @@ class MainActivity : AppCompatActivity() {
 
                         val rawLocal = filesDir.path + "/rootfs/localBroadcastIntent"
                         val rawBinder = filesDir.path + "/rootfs/binderBroadcastIntent"
-                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q &&
+                        // The raw parcels carry the transaction code and are replayed verbatim,
+                        // so there is no separate code file for the guest to pick up.
+                        val captured = Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q &&
                             RawParcelCapture.capture(rawLocal, "local") &&
                             RawParcelCapture.capture(rawBinder, "binder")
-                        ) {
-                            // Raw parcels carry the transaction code and are replayed verbatim.
-                            // Remove the legacy hand-written parcels and code file so the guest
-                            // cannot pick up a stale pair.
-                            File(filesDir.path + "/rootfs/trans_code").delete()
-                        } else {
-                            Log.w(TAG, "raw parcel capture failed, falling back to legacy parcels")
-                            ParcelConstructor.getBroadcastIntent("local")
-                            ParcelConstructor.getBroadcastIntent("binder")
-                            File(filesDir.path + "/rootfs/trans_code")
-                                .writeText(Anbox.getBroadcastIntentTransactionCode().toString())
+                        File(filesDir.path + "/rootfs/trans_code").delete()
+                        if (!captured) {
+                            // Without these the guest cannot complete the handshake; surface it
+                            // loudly instead of silently starting a container that cannot run.
+                            Log.e(TAG, "raw parcel capture failed, guest handshake will not work")
                         }
 
                         progressDialog.dismiss()

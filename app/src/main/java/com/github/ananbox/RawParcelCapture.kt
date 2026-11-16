@@ -34,8 +34,8 @@ object RawParcelCapture {
     /**
      * Captures the parcel for [key] ("local" or "binder") into [path].
      *
-     * @return true on success. On failure nothing is written and the caller should fall back
-     *         to the legacy [ParcelConstructor] path (or skip the handshake).
+     * @return true on success. On failure nothing is written and the handshake cannot
+     *         complete; the caller reports it rather than falling back.
      */
     fun capture(path: String, key: String): Boolean {
         val method = findBroadcastIntentMethod()
