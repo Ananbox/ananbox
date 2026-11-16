@@ -173,12 +173,23 @@ class MainActivity : AppCompatActivity() {
                             )
                         )
 
-                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                        val rawLocal = filesDir.path + "/rootfs/localBroadcastIntent"
+                        val rawBinder = filesDir.path + "/rootfs/binderBroadcastIntent"
+                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q &&
+                            RawParcelCapture.capture(rawLocal, "local") &&
+                            RawParcelCapture.capture(rawBinder, "binder")
+                        ) {
+                            // Raw parcels carry the transaction code and are replayed verbatim.
+                            // Remove the legacy hand-written parcels and code file so the guest
+                            // cannot pick up a stale pair.
+                            File(filesDir.path + "/rootfs/trans_code").delete()
+                        } else {
+                            Log.w(TAG, "raw parcel capture failed, falling back to legacy parcels")
                             ParcelConstructor.getBroadcastIntent("local")
                             ParcelConstructor.getBroadcastIntent("binder")
+                            File(filesDir.path + "/rootfs/trans_code")
+                                .writeText(Anbox.getBroadcastIntentTransactionCode().toString())
                         }
-                        val codeFile = File(filesDir.path + "/rootfs/trans_code")
-                        codeFile.writeText(Anbox.getBroadcastIntentTransactionCode().toString())
 
                         progressDialog.dismiss()
                         romFile.delete()

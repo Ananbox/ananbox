@@ -11,6 +11,11 @@
 
 typedef int32_t status_t;
 
+// Parcel's object offset table is an array of these (binder_size_t in
+// <linux/android/binder.h>). 64-bit targets are the only supported ones, so it
+// is always 8 bytes; AnanboxFile.h exports sizeof() to the guest to verify.
+typedef uint64_t binder_size_t;
+
 class Parcel {
 public:
 
@@ -19,7 +24,7 @@ public:
     size_t              mDataSize;
     size_t              mDataCapacity;
     mutable size_t mDataPos;
-    uint64_t*      mObjects;
+    binder_size_t*      mObjects;
     size_t              mObjectsSize;
 
 };

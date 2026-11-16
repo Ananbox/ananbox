@@ -30,6 +30,10 @@ object Anbox: View.OnTouchListener {
     external fun pushFingerDown(x: Int, y: Int, fingerId: Int)
     external fun pushFingerMotion(x: Int, y: Int, fingerId: Int)
     external fun dumpParcel(parcel: Parcel, path: String)
+    external fun getParcelObjectsCount(parcel: Parcel): Int
+    external fun dumpRawParcel(
+        parcel: Parcel, path: String, binderObjectIndex: Int, transactCode: Int
+    ): Boolean
 
     fun stopContainer() {
         Log.d("Anbox", "stopContainer")

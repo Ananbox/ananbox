@@ -1,6 +1,9 @@
 #include <jni.h>
 #include <string>
 #include <cstdint>
+#include <cstring>
+#include <cerrno>
+#include <fcntl.h>
 #include <unistd.h>
 #include <android/input.h>
 #include "anbox/graphics/emugl/Renderer.h"
@@ -18,6 +21,7 @@
 #include <android/log.h>
 #include <android/native_window_jni.h>
 #include "Parcel.h"
+#include "AnanboxFile.h"
 #define TAG "libAnbox"
 
 #define ALOGI(...) __android_log_print(ANDROID_LOG_INFO, TAG, __VA_ARGS__)
@@ -338,11 +342,11 @@ Java_com_github_ananbox_Anbox_dumpParcel(JNIEnv *env, jobject thiz, jobject jpar
     }
 
     ALOGI("mdata: %p", parcel->mData);
-    ALOGI("mdataPos: %d", parcel->mDataPos);
-    ALOGI("mdataSize: %d", parcel->mDataSize);
-    ALOGI("mdataCapacity: %d", parcel->mDataCapacity);
-    ALOGI("mObject: %p", *parcel->mObjects);
-    ALOGI("mObjectSize: %d", parcel->mObjectsSize);
+    ALOGI("mdataPos: %zu", parcel->mDataPos);
+    ALOGI("mdataSize: %zu", parcel->mDataSize);
+    ALOGI("mdataCapacity: %zu", parcel->mDataCapacity);
+    ALOGI("mObject: %llu", (unsigned long long) *parcel->mObjects);
+    ALOGI("mObjectSize: %zu", parcel->mObjectsSize);
 
     const char *path = env->GetStringUTFChars(jpath, 0);
     int fd = open(path, O_CREAT | O_WRONLY, 0700);
@@ -357,4 +361,114 @@ Java_com_github_ananbox_Anbox_dumpParcel(JNIEnv *env, jobject thiz, jobject jpar
         close(fd);
     }
     env->ReleaseStringUTFChars(jpath, path);
+}
+
+static Parcel* getNativeParcelOrDie(JNIEnv *env, jobject jparcel) {
+    if (jparcel == nullptr)
+        return nullptr;
+    jclass parcel_clazz = FindClassOrDie(env, "android/os/Parcel");
+    jfieldID  parcel_mNativePtr = GetFieldIDOrDie(env, parcel_clazz, "mNativePtr", "J");
+    return (Parcel*) env->GetLongField(jparcel, parcel_mNativePtr);
+}
+
+// Number of flat_binder_object entries currently recorded in the parcel.
+// Used by the Kotlin side to learn the index of the binder it just wrote, so
+// the guest never has to scan the parcel looking for it.
+extern "C"
+JNIEXPORT jint JNICALL
+Java_com_github_ananbox_Anbox_getParcelObjectsCount(JNIEnv *env, jobject thiz, jobject jparcel) {
+    Parcel* parcel = getNativeParcelOrDie(env, jparcel);
+    if (parcel == nullptr)
+        return 0;
+    return (jint) parcel->mObjectsSize;
+}
+
+static bool writeAll(int fd, const void* buf, size_t len) {
+    const uint8_t* p = (const uint8_t*) buf;
+    while (len > 0) {
+        ssize_t written = write(fd, p, len);
+        if (written <= 0) {
+            if (written < 0 && errno == EINTR)
+                continue;
+            return false;
+        }
+        p += written;
+        len -= (size_t) written;
+    }
+    return true;
+}
+
+// Dump the raw transact parcel in the format described by AnanboxFile.h.
+//
+// binderObjectIndex is the index (into the Parcel object offset table) of the
+// flat_binder_object that the guest must rebind to its LocalBinder. A negative
+// value is recorded as ANANBOX_NO_BINDER_INDEX.
+// transactCode is the transaction code the guest should call; <= 0 means the
+// guest should refuse to use the file.
+//
+// The file is written to a temporary name and renamed into place, so a guest
+// reading concurrently never sees a partial file (the old code used O_CREAT
+// without O_TRUNC and could leave stale trailing bytes behind).
+extern "C"
+JNIEXPORT jboolean JNICALL
+Java_com_github_ananbox_Anbox_dumpRawParcel(JNIEnv *env, jobject thiz, jobject jparcel,
+                                            jstring jpath, jint binderObjectIndex,
+                                            jint transactCode) {
+    Parcel* parcel = getNativeParcelOrDie(env, jparcel);
+    if (parcel == nullptr || parcel->mData == nullptr) {
+        ALOGI("dumpRawParcel: parcel or data is null");
+        return JNI_FALSE;
+    }
+    if (binderObjectIndex >= 0 && (size_t) binderObjectIndex >= parcel->mObjectsSize) {
+        ALOGI("dumpRawParcel: binder_object_index %d out of range (objects=%zu)",
+              binderObjectIndex, parcel->mObjectsSize);
+        return JNI_FALSE;
+    }
+    if (parcel->mObjectsSize > 0 && parcel->mObjects == nullptr) {
+        ALOGI("dumpRawParcel: objects table is null but objects_size is %zu",
+              parcel->mObjectsSize);
+        return JNI_FALSE;
+    }
+
+    ananbox_parcel_header header;
+    memset(&header, 0, sizeof(header));
+    header.magic = ANANBOX_PARCEL_MAGIC;
+    header.version = ANANBOX_PARCEL_VERSION;
+    header.transact_code = transactCode;
+    header.binder_object_index = binderObjectIndex < 0
+            ? ANANBOX_NO_BINDER_INDEX : (uint32_t) binderObjectIndex;
+    header.data_size = (uint32_t) parcel->mDataSize;
+    header.objects_count = (uint32_t) parcel->mObjectsSize;
+    header.objects_elem_size = (uint32_t) sizeof(binder_size_t);
+
+    const char *path = env->GetStringUTFChars(jpath, 0);
+    std::string tmp_path = std::string(path) + ".tmp";
+    jboolean ok = JNI_FALSE;
+
+    int fd = open(tmp_path.c_str(), O_CREAT | O_WRONLY | O_TRUNC, 0600);
+    if (fd < 0) {
+        ALOGI("dumpRawParcel: open %s failed, errno=%d", tmp_path.c_str(), errno);
+    } else {
+        bool written = writeAll(fd, &header, sizeof(header))
+                && writeAll(fd, parcel->mData, parcel->mDataSize)
+                && writeAll(fd, parcel->mObjects,
+                            parcel->mObjectsSize * sizeof(binder_size_t));
+        if (written) {
+            fsync(fd);
+            close(fd);
+            if (rename(tmp_path.c_str(), path) == 0) {
+                ok = JNI_TRUE;
+            } else {
+                ALOGI("dumpRawParcel: rename to %s failed, errno=%d", path, errno);
+                unlink(tmp_path.c_str());
+            }
+        } else {
+            ALOGI("dumpRawParcel: write failed, errno=%d", errno);
+            close(fd);
+            unlink(tmp_path.c_str());
+        }
+    }
+
+    env->ReleaseStringUTFChars(jpath, path);
+    return ok;
 }
